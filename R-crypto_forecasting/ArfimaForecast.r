@@ -18,8 +18,6 @@ get_data <- function(file_name) {
 
 # create time series from crypto data
 get_time_series <- function(ts_table) {
-    library(xts)
-    library(tsbox)
     start_full_date <- ts_table$Date[1]
     close_full_date <- ts_table$Date[length(ts_table$Date)]
     start_date <- strsplit(start_full_date, " ")[[1]][1]
@@ -27,8 +25,8 @@ get_time_series <- function(ts_table) {
     time_seq <- seq(from = as.Date(start_date),
                     to = as.Date(close_date),
                     by = 1)
-    train <- xts::xts(x = ts_table$Close, order.by = time_seq)
-    return(tsbox::ts_ts(train))
+    ts_data <- xts::xts(x = ts_table$Close, order.by = time_seq)
+    return(tsbox::ts_ts(ts_data))
 }
 
 # export forecasted values to csv file
@@ -67,7 +65,7 @@ find_best_arfima_model <- function(ar_params, ma_params, train) {
 }
 
 btc_close <- get_data("BitcoinTransformedClose.csv")
-# fix(btc_close)
+fix(btc_close)
 
 ts_data <- get_time_series(btc_close)
 
@@ -78,7 +76,7 @@ train <- head(ts_data, -30)
 # train <- tail(head(ts_data, -30), 500)
 test <- tail(ts_data, 30)
 
-# forecast::tsdisplay(train, main = "Bitcoin close price")
+forecast::tsdisplay(train, main = "Bitcoin close price")
 
 cat("\n")
 
@@ -89,7 +87,7 @@ start_time <- Sys.time()
 
 model <- forecast::arfima(train)
 print(summary(model))
-# forecast::tsdisplay(model$residuals, main = "Residuals")
+forecast::tsdisplay(model$residuals, main = "Residuals")
 forecasted_out <- forecast::forecast(model, level = c(95), h = horizon)
 
 end_time <- Sys.time()
@@ -104,20 +102,20 @@ forecasted_values <- forecasted_out[2]$mean
 forecasted_dates <- format(lubridate::date_decimal(forecasted_dates_numeric),
                     "%Y-%m-%d")
 
-# par(c(1, 1))
-# plot(forecasted_out,
-#      xaxt = "n",
-#      xlab = "Date",
-#      ylab = "Bitcoin close price (USD)",
-#      xlim = c(time(train)[length(train) - 60],
-#             forecasted_dates_numeric[length(forecasted_dates_numeric)]),
-#     #  main = "ARFIMA model predictions",
-#      showgap = FALSE,
-#      shadecols = "#205bff6a",
-#      fcol = "#1d1dff")
-# axis(1,
-#      time(ts_data),
-#      format(lubridate::date_decimal(as.numeric(time(ts_data))), "%Y-%m-%d"))
+par(c(1, 1))
+plot(forecasted_out,
+     xaxt = "n",
+     xlab = "Date",
+     ylab = "Bitcoin close price (USD)",
+     xlim = c(time(train)[length(train) - 60],
+            forecasted_dates_numeric[length(forecasted_dates_numeric)]),
+    #  main = "ARFIMA model predictions",
+     showgap = FALSE,
+     shadecols = "#205bff6a",
+     fcol = "#1d1dff")
+axis(1,
+     time(ts_data),
+     format(lubridate::date_decimal(as.numeric(time(ts_data))), "%Y-%m-%d"))
 
 
 # forecasted_to_csv(forecasted_dates,
@@ -163,10 +161,17 @@ model_arfima_man <- arfima::arfima(train,
 forecasted_arfima_man_out <- predict(model_arfima_man,
                                      n.ahead = 30)
 
-# plot(residuals(model_arfima_man)[[1]],
-#                ylab = "",
-#                type = "b",
-#                main = "Residuals")
+plot(residuals(model_arfima_man)[[1]],
+               ylab = "",
+               type = "b",
+               main = paste0("Residuals of ARFIMA(",
+                 ar_param, ",", ma_param, ",", d_param, ")"))
+acf(residuals(model_arfima_man)[[1]],
+ main = paste0("Residuals of ARFIMA ACF(",
+  ar_param, ",", ma_param, ",", d_param, ")"))
+pacf(residuals(model_arfima_man)[[1]],
+ main = paste0("Residuals of ARFIMA PACF(",
+  ar_param, ",", ma_param, ",", d_param, ")"))
 
 forecasted_arfima_man_values <- forecasted_arfima_man_out[[1]]$Forecast
 
