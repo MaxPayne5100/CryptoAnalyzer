@@ -39,7 +39,7 @@ forecasted_to_csv <- function(dates, forecasted_vals, csv_path) {
 }
 
 # find best arfima model from input quantity of ar and ma parameters
-find_best_arfima_model <- function(ar_params, ma_params, train) {
+find_best_arfima_model <- function(ar_params, ma_params, train, horizon) {
     min_mse <- Inf
     return_params <- c(0, 0, 0)
 
@@ -50,7 +50,7 @@ find_best_arfima_model <- function(ar_params, ma_params, train) {
                                     order = c(ar, ma, d_test),
                                     numeach = c(1, 1))
             forecasted_arfima_test <- predict(model_arfima_test,
-                                    n.ahead = 30)
+                                    n.ahead = horizon)
             forecasted_arfima_test_vals <- forecasted_arfima_test[[1]]$Forecast
             test_mse <- Metrics::rmse(test, forecasted_arfima_test_vals)
 
@@ -72,15 +72,15 @@ ts_data <- get_time_series(btc_close)
 # get Hurst exponent using R/S analysis
 print(pracma::hurstexp(ts_data))
 
-train <- head(ts_data, -30)
-# train <- tail(head(ts_data, -30), 500)
-test <- tail(ts_data, 30)
+horizon <- 30
+
+train <- head(ts_data, -horizon)
+# train <- tail(head(ts_data, -horizon), 500)
+test <- tail(ts_data, horizon)
 
 forecast::tsdisplay(train, main = "Bitcoin close price")
 
 cat("\n")
-
-horizon <- 30
 
 # time measuring of auto arfima modeling and forecasting
 start_time <- Sys.time()
@@ -117,7 +117,6 @@ axis(1,
      time(ts_data),
      format(lubridate::date_decimal(as.numeric(time(ts_data))), "%Y-%m-%d"))
 
-
 # forecasted_to_csv(forecasted_dates,
 #                   forecasted_values,
 #                   "BitcoinForecasted.csv")
@@ -148,7 +147,7 @@ ma_params <- c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
 
 oldw <- getOption("warn")
 options(warn = -1)
-param_vec <- (find_best_arfima_model(ar_params, ma_params, train))
+param_vec <- (find_best_arfima_model(ar_params, ma_params, train, horizon))
 options(warn = oldw)
 
 ar_param <- param_vec[1]
@@ -159,7 +158,7 @@ model_arfima_man <- arfima::arfima(train,
                                    order = c(ar_param, ma_param, d_param),
                                    numeach = c(1, 1))
 forecasted_arfima_man_out <- predict(model_arfima_man,
-                                     n.ahead = 30)
+                                     n.ahead = horizon)
 
 plot(residuals(model_arfima_man)[[1]],
                ylab = "",
@@ -167,11 +166,11 @@ plot(residuals(model_arfima_man)[[1]],
                main = paste0("Residuals of ARFIMA(",
                  ar_param, ",", ma_param, ",", d_param, ")"))
 acf(residuals(model_arfima_man)[[1]],
- main = paste0("Residuals of ARFIMA ACF(",
-  ar_param, ",", ma_param, ",", d_param, ")"))
+ main = paste0("Residuals of ARFIMA(",
+  ar_param, ",", ma_param, ",", d_param, ") ACF"))
 pacf(residuals(model_arfima_man)[[1]],
- main = paste0("Residuals of ARFIMA PACF(",
-  ar_param, ",", ma_param, ",", d_param, ")"))
+ main = paste0("Residuals of ARFIMA(",
+  ar_param, ",", ma_param, ",", d_param, ") PACF"))
 
 forecasted_arfima_man_values <- forecasted_arfima_man_out[[1]]$Forecast
 
