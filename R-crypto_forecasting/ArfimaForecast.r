@@ -75,7 +75,7 @@ print(pracma::hurstexp(ts_data))
 horizon <- 30
 
 train <- head(ts_data, -horizon)
-# train <- tail(head(ts_data, -horizon), 500)
+#train <- tail(head(ts_data, -horizon), 500)
 test <- tail(ts_data, horizon)
 
 forecast::tsdisplay(train, main = "Bitcoin close price")
@@ -117,9 +117,9 @@ axis(1,
      time(ts_data),
      format(lubridate::date_decimal(as.numeric(time(ts_data))), "%Y-%m-%d"))
 
-# forecasted_to_csv(forecasted_dates,
-#                   forecasted_values,
-#                   "BitcoinForecasted.csv")
+forecasted_to_csv(forecasted_dates,
+                  forecasted_values,
+                  "BitcoinForecasted.csv")
 cat("\n")
 print(forecast::arimaorder(model))
 print("ARFIMA accuracy: ")
@@ -137,7 +137,11 @@ print(forecast::accuracy(forecasted_arima_out, test))
 cat("\n")
 
 # manually fitted arfima modeling and forecasting
-m_gph <- fracdiff::fdGPH(train)
+m_gph <- fracdiff::fdGPH(train, bandw.exp = 0.5)
+cat("\n")
+print(m_gph$d)
+print(m_gph$sd.as)
+print(m_gph$sd.reg)
 diff_train <- fracdiff::diffseries(train, d = m_gph$d)
 forecast::tsdisplay(diff_train, main = "Differenciated BTC close price")
 
