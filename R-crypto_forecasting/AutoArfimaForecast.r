@@ -14,8 +14,12 @@ if (length(args) == 0) {
 } else if (length(args) == 1) {
     args[2] <- "ClosePriceForecasted.csv"
     args[3] <- 7
+    args[4] <- ""
 } else if (length(args) == 2) {
     args[3] <- 7
+    args[4] <- ""
+} else if (length(args) == 3) {
+    args[4] <- ""
 }
 
 main_dir <- paste("E://Projects/Master-Diploma/CryptoAnalyzer",
@@ -57,7 +61,7 @@ forecasted_to_csv <- function(dates, forecasted_vals, csv_path) {
 }
 
 # main function to train arfima model
-arfima_modelling <- function(source_path, dest_path, horizon) {
+arfima_modelling <- function(source_path, dest_path, horizon, timestamp) {
     btc_close <- get_data(source_path)
 
     forecast_date <- btc_close$Date[length(btc_close$Date)]
@@ -80,7 +84,8 @@ arfima_modelling <- function(source_path, dest_path, horizon) {
 
     forecasted_values <- forecasted_out[2]$mean
 
-    png(file = file.path(results_dir, "ARFIMA_visual_forecast.png"),
+    png(file = file.path(results_dir,
+     paste("ARFIMA_visual_forecast_", timestamp, ".png", sep = "")),
                          width = 900,
                          height = 700)
     par(c(1, 1))
@@ -103,10 +108,11 @@ arfima_modelling <- function(source_path, dest_path, horizon) {
                       forecasted_values,
                       file.path(results_dir, dest_path))
 
-    sink(file = file.path(results_dir, "ARFIMA_output.txt"))
+    sink(file = file.path(results_dir,
+     paste("ARFIMA_output_", timestamp, ".txt", sep = "")))
     print(forecast::arimaorder(model))
     sink(file = NULL)
 }
 
-arfima_modelling(args[1], args[2], as.numeric(args[3]))
+arfima_modelling(args[1], args[2], as.numeric(args[3]), args[4])
 # arfima_modelling("BTCClosePrice.csv", "BTCClosePriceForecasted.csv", 30)

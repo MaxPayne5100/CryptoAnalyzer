@@ -95,4 +95,3 @@ def update_crypto_data(sign: str):
 
 if __name__ == "__main__":
     update_crypto_data("XLM")
-

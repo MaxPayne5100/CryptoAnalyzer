@@ -8,6 +8,7 @@ from telebot import types
 from bob_telegram_tools.bot import TelegramBot
 from bob_telegram_tools.utils import TelegramTqdm
 from telegram import ParseMode
+import datetime as dt
 
 config_obj = configparser.ConfigParser()
 
@@ -91,15 +92,16 @@ def arfima_invocation(cryptocurrency_, horizon_, user_id):
                      "ARFIMA training started:")
     bot2 = TelegramBot(bot_params["token"], user_id)
     pb = TelegramTqdm(bot2)
+    current_timestamp = int(dt.datetime.now().timestamp())
     with pb(total=100) as pbar:
         command = 'C:/Program Files/R/R-4.1.3/bin/Rscript'
         path2script = 'E:/Projects/Master-Diploma/CryptoAnalyzer/R' \
                       '-crypto_forecasting/AutoArfimaForecast.R'
-        arg1 = f'{cryptocurrency_}/ClosePrice.csv'
-        arg2 = f'{cryptocurrency_}ClosePriceForecasted.csv'
+        arg1 = f'{cryptocurrency_}ClosePrice.csv'
+        arg2 = f'{cryptocurrency_}ClosePriceForecasted_{current_timestamp}.csv'
         arg3 = f'{horizon_}'
-
-        subprocess.call([command, path2script, arg1, arg2, arg3],
+        arg4 = f'{current_timestamp}'
+        subprocess.call([command, path2script, arg1, arg2, arg3, arg4],
                         shell=True)
         pbar.update(100)
     bot.send_message(user_id,
@@ -113,34 +115,36 @@ def arfima_invocation(cryptocurrency_, horizon_, user_id):
                                "Do you want to see full model description?",
                                reply_markup=markup)
     bot.register_next_step_handler(message, process_print_selection,
-                                   cryptocurrency_, user_id)
+                                   cryptocurrency_, user_id, current_timestamp)
 
 
-def process_print_selection(message, cryptocurrency_, user_id):
+def process_print_selection(message, cryptocurrency_, user_id,
+                            current_timestamp):
     markup = types.ReplyKeyboardRemove(selective=False)
     path = "E://Projects/Master-Diploma/CryptoAnalyzer/R-crypto_forecasting" \
            "/results"
     if message.text.lower() == "yes":
-        send_image_result(path, markup, user_id)
-        send_model_desc(path, markup, user_id)
-    send_results(path, markup, cryptocurrency_, user_id)
+        send_image_result(path, markup, user_id, current_timestamp)
+        send_model_desc(path, markup, user_id, current_timestamp)
+    send_results(path, markup, cryptocurrency_, user_id, current_timestamp)
 
 
-def send_image_result(path, markup, user_id):
+def send_image_result(path, markup, user_id, current_timestamp):
     bot.send_message(user_id,
                      "ARFIMA forecast visual representation:\n\nBlue line "
                      "shows forecasted close prices and light blue area "
                      "shows price discrepancy with 95% probability.",
                      reply_markup=markup)
     bot.send_photo(user_id, photo=open(os.path.join(
-        path, "ARFIMA_visual_forecast.png"), 'rb'))
+        path, f"ARFIMA_visual_forecast_{current_timestamp}.png"), 'rb'))
 
 
-def send_model_desc(path, markup, user_id):
+def send_model_desc(path, markup, user_id, current_timestamp):
     table = pt.PrettyTable(['AR', 'D', 'MA'])
     table.title = "ARFIMA model parameters:"
 
-    with open(os.path.join(path, 'ARFIMA_output.txt')) as f:
+    with open(os.path.join(path, f'ARFIMA_output_{current_timestamp}.txt')) \
+            as f:
         contents = f.read()
 
     params = contents.splitlines()[1].split()
@@ -153,9 +157,10 @@ def send_model_desc(path, markup, user_id):
                      parse_mode=ParseMode.MARKDOWN_V2)
 
 
-def send_results(path, markup, cryptocurrency_, user_id):
+def send_results(path, markup, cryptocurrency_, user_id, current_timestamp):
     file_path = os.path.join(path, f'{cryptocurrency_}' +
-                                        'ClosePriceForecasted.csv')
+                                        f'ClosePriceForecasted'
+                                        f'_{current_timestamp}.csv')
     if os.path.isfile(file_path):
         table = pt.PrettyTable(['Date', 'Price'])
         table.align['Date'] = 'c'
